@@ -1,83 +1,119 @@
-# main.py
-from clases.cliente import Cliente
-from clases.servicios_especificos import ReservaSala, AlquilerEquipo, AsesoriaEspecializada
-from clases.reserva import Reserva
-from excepciones.excepciones_personalizadas import *
+# ========================================================
+# SISTEMA DE GESTIÓN SOFTWARE FJ - FASE 4
+# Entrega Final - Todo en main.py
+# ========================================================
+
 import datetime
 
-# Lista para almacenar los objetos
+# ====================== EXCEPCIONES ======================
+class ErrorSistema(Exception):
+    pass
+
+class DatosInvalidosError(ErrorSistema):
+    def __init__(self, mensaje="Datos inválidos"):
+        self.mensaje = mensaje
+        super().__init__(self.mensaje)
+
+class ServicioNoDisponibleError(ErrorSistema):
+    def __init__(self, nombre):
+        self.mensaje = f"El servicio '{nombre}' no está disponible"
+        super().__init__(self.mensaje)
+
+# ====================== CLASES ======================
+class Cliente:
+    def __init__(self, cliente_id, nombre, email, telefono):
+        self.cliente_id = cliente_id
+        self.nombre = nombre
+        self.email = email
+        self.telefono = telefono
+        self.reservas_activas = 0
+        self._validar()
+
+    def _validar(self):
+        if len(self.nombre.strip()) < 3:
+            raise DatosInvalidosError("El nombre debe tener mínimo 3 caracteres")
+        if "@" not in self.email:
+            raise DatosInvalidosError("Email inválido")
+
+    def __str__(self):
+        return f"Cliente[{self.cliente_id}] - {self.nombre} ({self.email})"
+
+
+class Servicio:
+    def __init__(self, servicio_id, nombre, precio_base):
+        self.servicio_id = servicio_id
+        self.nombre = nombre
+        self.precio_base = precio_base
+        self.disponible = True
+
+    def calcular_costo(self, duracion=1):
+        if not self.disponible:
+            raise ServicioNoDisponibleError(self.nombre)
+        return round(self.precio_base * duracion, 2)
+
+    def __str__(self):
+        estado = "Disponible" if self.disponible else "No disponible"
+        return f"{self.nombre} - ${self.precio_base:,.0f} [{estado}]"
+
+
+# ====================== PROGRAMA PRINCIPAL ======================
 clientes = []
 servicios = []
 reservas = []
 
-def registrar_log(mensaje: str):
-    """Registra errores y eventos en un archivo de logs"""
-    with open("logs/errores.log", "a", encoding="utf-8") as f:
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        f.write(f"[{timestamp}] {mensaje}\n")
-
-def menu_principal():
+def menu():
     print("\n" + "="*60)
-    print("   SISTEMA DE GESTIÓN SOFTWARE FJ - FASE 4")
+    print("   SISTEMA SOFTWARE FJ - FASE 4 (Entrega Final)")
     print("="*60)
     print("1. Registrar Cliente")
-    print("2. Crear Servicios")
+    print("2. Mostrar Servicios")
     print("3. Realizar Reserva")
-    print("4. Cancelar Reserva")
-    print("5. Mostrar Información")
-    print("6. Pruebas con Errores (Demostración)")
+    print("4. Pruebas de Excepciones")
     print("0. Salir")
     print("="*60)
 
 def main():
-    print("🚀 Iniciando Sistema de Gestión Software FJ...\n")
+    print("🚀 Iniciando Sistema...\n")
     
-    # Crear algunos servicios iniciales
-    servicios.append(ReservaSala(1, "Sala de Reuniones", 45000, 8))
-    servicios.append(AlquilerEquipo(2, "Laptop Dell", 85000, "Laptop Gaming"))
-    servicios.append(AsesoriaEspecializada(3, "Asesoría Python", 120000, "Juan Experto"))
+    # Servicios iniciales
+    servicios.append(Servicio(1, "Sala de Reuniones", 45000))
+    servicios.append(Servicio(2, "Alquiler Laptop", 85000))
+    servicios.append(Servicio(3, "Asesoría Python", 120000))
 
     while True:
-        menu_principal()
+        menu()
         try:
-            opcion = int(input("\nSeleccione una opción: "))
-            
-            if opcion == 1:  # Registrar Cliente
+            opcion = int(input("\nOpción: "))
+
+            if opcion == 1:
                 try:
                     cid = len(clientes) + 1
-                    nombre = input("Nombre completo: ")
+                    nombre = input("Nombre: ")
                     email = input("Email: ")
-                    telefono = input("Teléfono: ")
-                    
-                    cliente = Cliente(cid, nombre, email, telefono)
-                    clientes.append(cliente)
-                    print(f"✅ Cliente registrado: {cliente}")
-                    registrar_log(f"Cliente registrado: {cliente.nombre}")
+                    tel = input("Teléfono: ")
+                    c = Cliente(cid, nombre, email, tel)
+                    clientes.append(c)
+                    print(f"✅ Cliente registrado: {c}\n")
                 except Exception as e:
                     print(f"❌ Error: {e}")
-                    registrar_log(f"ERROR Cliente: {e}")
+
+            elif opcion == 2:
+                print("\nServicios:")
+                for s in servicios:
+                    print(f"  {s}")
+
+            elif opcion == 4:
+                print("\n--- Prueba de Excepciones ---")
+                try:
+                    Cliente(99, "ab", "mal", "123")
+                except Exception as e:
+                    print(f"✅ Excepción controlada: {e}")
 
             elif opcion == 0:
-                print("👋 Gracias por usar el sistema. ¡Hasta pronto!")
+                print("¡Hasta pronto!")
                 break
-
-            # ... (puedo agregar más opciones después)
-
-        except ValueError:
-            print("❌ Por favor ingrese un número válido.")
-            registrar_log("Error: Entrada no numérica en menú")
-        except Exception as e:
-            print(f"❌ Error inesperado: {e}")
-            registrar_log(f"ERROR GENERAL: {e}")
-
-    # Pruebas finales de robustez
-    print("\n🔍 Realizando pruebas de manejo de excepciones...")
-    try:
-        # Prueba de error
-        cliente_error = Cliente(99, "", "mal@correo", "123")
-    except DatosInvalidosError as e:
-        print(f"✅ Excepción controlada correctamente: {e}")
-        registrar_log(f"Prueba exitosa excepción: {e}")
+        except:
+            print("Ingrese un número válido.")
 
 if __name__ == "__main__":
     main()
